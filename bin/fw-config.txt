@@ -1,0 +1,27 @@
+# NOTE: this file is not used to start, stop, or restart event display
+#       use fireworksOnlineSystem instead.
+
+
+$FW_ENABLED                   = 1 ;
+
+$FW_NEW_FILE_NOTIFICATION     = 1; # notify new files 
+
+$FW_NOTIFY_NEW_FILE_TIMEOUT   = 5; # sleep n seconds to notify new data file
+
+$FW_PORT                      = 8092;
+
+$FW_DATA_DIR                  = '/afs/cern.ch/user/c/ccoffl/RootFileTempStorageArea/';
+
+$FW_DEBUG                     = 1; # debug info in monitor.log
+
+$FW_SCP_CMSSHOW_IMAGE_ENABLE  = 1; # generated with cmsShow option update-all-images
+
+$FW_SCP_DESKTOP_IMAGE_ENABLE  = 1; # generated with xwd
+
+$FW_TRANSFER_IMAGE_TIMEOUT    = 20; # sleep n seconds between scp images
+
+$FW_SCP_TARGET                = 'evtdisp@cms-srv-c2c03-01.cern.ch:images vis@ww-higgs.ucsd.edu:/var/www/html/vis/';
+
+$FW_MAIL_LIST                 = 'ianna.osborne@cern.ch alja.mrak.tadel@cern.ch matevz.tadel@cern.ch amraktadel@ucsd.edu mtadel@ucsd.edu cms-orm-on-duty@cern.ch ayagil@physics.ucsd.edu dmytro@slac.stanford.edu';
+
+

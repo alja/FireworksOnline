@@ -1,0 +1,14 @@
+#!/bin/sh
+
+export DISPLAY=:0.0
+
+dataFile=$1;
+ln -s -f ${FW_DIR}/log/cmsShow.$$.log ${FW_DIR}/log/cmsShow.log
+
+HI_CONFIG=/afs/cern.ch/user/c/ccvis/public/online-P5-six-screens-4_forHI_08112011.fwc
+
+options=" -c $HI_CONFIG  --auto-save-all-views $FW_DIR/screenshots/online_ --log 0 --chain 10  --port $FW_PORT -p 2 --live"
+
+echo "Starting cmsShow $options $dataFile";
+
+/home/vis/cmsShow-4.4-0/cmsShow $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1

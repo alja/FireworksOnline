@@ -1,0 +1,211 @@
+#!/usr/bin/env perl
+
+use Switch;
+use File::Copy;
+use Proc::Killfam;
+use Term::ANSIColor;
+
+use Proc::ProcessTable;
+use strict;
+use vars qw ($FW_ENABLED $FW_DIR);
+
+$FW_DIR =$ARGV[0];
+unless ( -r $FW_DIR)
+{
+  printf("First argument not a valid directory \n");
+  printf("usage: fireworksOnlineSystem <base_dir> [start|stop|restart|status]\n");
+  exit;
+}
+
+
+sub readLineFromFile
+{
+  # Returns the first line from file or "" if the file does not exist.
+  # Dies if file can not be opened for reading.
+
+  my $filename = shift;
+  return "" unless -e $filename;
+  open F, $filename or die("Can't read_line_from_file!");
+  my $line = <F>;
+  close F;
+  chomp $line;
+  return $line;
+}
+
+# edit fw-congif
+sub setEnabled
+{  
+  my $config="$FW_DIR/bin/fw-config.txt";
+  my $configBAQ="$FW_DIR/bin/fw-config.txt.BAQ";
+  copy("$config", "$configBAQ");
+  open (MYFILE, ">$config");
+  open (MYFILE_BAQ, "$configBAQ");
+  my $enabled = shift;
+
+  printf("Edit $config. Set FW_ENABLED to %d\n", $enabled );
+
+  while (<MYFILE_BAQ>) {
+    if ( $_ =~ m/(\$FW_ENABLED\s*=\s*)(\d)/ )
+    { 
+      #printf("Set value in $config file\n");
+      print MYFILE "$1"."$enabled ;\n";
+    } 
+    else { 
+      print MYFILE "$_";
+    }
+  }
+
+  close MYFILE;
+  close MYFILE_BAQ;
+  unlink $configBAQ;
+}
+
+sub getCmsShowExePid()
+{
+  if ( -r "$FW_DIR/log/cmsShow_pid") {
+    my $sp = readLineFromFile("$FW_DIR/log/monitor_pid");
+    my $tree=`pstree -pcl $sp`;
+    if ($tree =~ /cmsShow.exe\((\d+)\)/) {
+      return $1;
+    }
+  }
+  return 0;
+}
+
+# look for log and than for any process
+sub fwStatus
+{
+  my $verbose = shift;
+
+  print color 'bold yellow';
+  print color 'reset';
+
+
+  if ( -r "$FW_DIR/log/monitor_pid")
+  {
+    my $monitorPid=readLineFromFile("$FW_DIR/log/monitor_pid");
+    if ( -r  "/proc/${monitorPid}")  {
+      printf ("%-13s is running (%4d)  \n","fw-monitor.pl",  $monitorPid);
+    }
+    elsif ($verbose) {
+      printf ("%-13s is NOT running\n", "fw-monitor.pl");
+    }
+
+    my $cpid = getCmsShowExePid();
+    if ( $cpid) {
+      if ( -r"/proc/$cpid") {
+	printf ("%-13s is running (%4d)  \n","cmsShow.exe",  $cpid);
+      }
+      elsif ($verbose) {
+	printf ("%-13s is NOT running\n", "cmsShow.exe");
+      }
+    }
+
+    my $proc_table=Proc::ProcessTable->new();
+    print color 'bold yellow';
+    foreach my $proc (@{$proc_table->table()}) {
+      if (($proc->cmndline =~ /cmsShow.exe/) && ($proc->pid != $cpid) ) {
+	my $esc = $proc->pid;
+	print "WARNING:: cmsShow.exe($esc) is not beeing monitored !\n";
+      }
+    }
+    print color 'reset';
+
+  }
+}
+
+# set disabled flag and wait fw-monitor and cmsShow to die
+sub fwStop
+{
+  my $monitorPid = 0;
+  my $cmsShowPid= 0;
+
+  if ( -r "$FW_DIR/log/monitor_pid") {
+    $monitorPid=readLineFromFile("$FW_DIR/log/monitor_pid");
+  }
+
+  if ( -r "$FW_DIR/log/cmsShow_pid") {
+    $cmsShowPid=readLineFromFile("$FW_DIR/log/cmsShow_pid");
+  }
+
+  print color 'bold red';
+  setEnabled(0);
+  printf("Terminating fw-monitor with pid [$monitorPid] and its child processes.\n");
+  kill(15, $monitorPid);
+
+  # wait max 3 seconds for processes to terminate
+  my $wcnt = 0;
+  while ($wcnt < 3)
+  {
+    unless ( -r "/proc/${monitorPid}" ) { last; }
+    $wcnt++;
+  }
+
+  # forcefully kill cmsShow.exe
+  while ( ( -r "/proc/${monitorPid}") || (-r "/proc/${cmsShowPid}")  )
+  {
+
+    if ( -r "/proc/${cmsShowPid}") { 
+      my $exePid = getCmsShowExePid();
+      if ($exePid) {
+	printf("Killing cmsShow.exe process with pid [%4d] \n", $exePid);
+	kill(9, $exePid);
+	sleep 2; 
+      }
+      else {
+	die ("Can't locate cmsShow.exe process \n");
+      }
+    }
+
+    if ( -r "/proc/${monitorPid}")  { 
+      printf("Killing fw-monitor process with pid [%4d] \n", $monitorPid);
+      kill(9, $monitorPid);
+      sleep 2; 
+    }
+
+  }
+  
+  print color 'reset';
+  fwStatus(0);
+}
+
+# set display enabled and run fw-monitor.pl not to wait for cron
+sub fwStart
+{
+  print color 'green';
+  print "Starting online event display.\n";
+  setEnabled(1);
+  system("nohup $FW_DIR/bin/fw-monitor.pl $FW_DIR > /dev/null 2>&1&");
+  print color 'reset';
+}
+
+################################################################################
+# MAIN
+################################################################################
+
+if (@ARGV == 1)
+{
+  fwStatus(1);
+  exit;
+}
+else
+{
+  switch ($ARGV[1]) {
+    case "start" {
+      fwStart();
+    }
+    case "stop" {
+      fwStop();
+    }
+    case "status" {
+      fwStatus(1);
+    }
+    case "restart" {
+      fwStop();
+      fwStart();
+    }
+    else {
+      print("Invalid option. \n");
+    }
+  }
+}
