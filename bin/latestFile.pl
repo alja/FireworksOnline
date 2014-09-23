@@ -2,7 +2,7 @@
 use strict;
 
 my $maxAgeSec = 60000;
-my $dir  = "/home/alja/tmpm3/test";
+my $dir  = "/eventdisplay/";
 my $lastFile = "/tmp/Log/LastFile";
 
 sub readLineFromFile
