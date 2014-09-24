@@ -10,7 +10,7 @@ $FW_NOTIFY_NEW_FILE_TIMEOUT   = 5; # sleep n seconds to notify new data file
 
 $FW_PORT                      = 8092;
 
-$FW_DATA_DIR                  = '/afs/cern.ch/user/c/ccoffl/RootFileTempStorageArea/';
+$FW_DATA_DIR                  = '/tmp';
 
 $FW_DEBUG                     = 1; # debug info in monitor.log
 
