@@ -24,7 +24,7 @@ while (1) {
     my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \*.root -newer $ref `; 
     my @candidates = split("\n",$lc);
 
-    my $current_time;
+    my $current_time = time;
     my %hash;
     foreach(@candidates) {
       my $cnd = $_;
