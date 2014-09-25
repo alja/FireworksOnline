@@ -24,11 +24,11 @@ while (1) {
     my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \*.root -newer $ref `; 
     my @candidates = split("\n",$lc);
 
-
+    my $current_time;
     my %hash;
     foreach(@candidates) {
       my $cnd = $_;
-      my $delta =  (stat($cnd))[9] - (stat($ref))[9];
+      my $delta =  $current_time - (stat($cnd))[9];
       if ($delta > 1) {
 	print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
 	$hash{ $delta } = $cnd;
