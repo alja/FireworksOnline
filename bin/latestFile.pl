@@ -1,9 +1,18 @@
 #!/bin/perl
 use strict;
 
-my $maxAgeSec = 60000;
-my $dir  = "/eventdisplay/";
+my $maxAgeSec = 60000000;
+my $dir  = "";
 my $lastFile = "/tmp/Log/LastFile";
+
+if (@ARGV < 1) {
+  print "usage: findLast.pl <dataDir> \n";
+  exit 1;
+}
+else {
+  $dir =  shift(@ARGV);
+}
+
 
 sub readLineFromFile
 {
@@ -18,6 +27,8 @@ sub readLineFromFile
     return $line;
 }
 
+
+
 while (1) {
     my $ref    = "/tmp/cmsShow-tmp.txt";
     system("touch -d \"-$maxAgeSec seconds\" $ref");
@@ -28,7 +39,7 @@ while (1) {
     my %hash;
     foreach(@candidates) {
       my $cnd = $_;
-      my $delta =  $current_time - (stat($cnd))[9];
+      my $delta = $current_time - (stat($cnd))[9];
       if ($delta > 1) {
 	print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
 	$hash{ $delta } = $cnd;
