@@ -32,7 +32,7 @@ sub readLineFromFile
 while (1) {
     my $ref    = "/tmp/cmsShow-tmp.txt";
     system("touch -d \"-$maxAgeSec seconds\" $ref");
-    my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \*.root -newer $ref `; 
+    my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \*.root`; 
     my @candidates = split("\n",$lc);
 
     my $current_time = time;
