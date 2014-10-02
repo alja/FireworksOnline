@@ -48,7 +48,7 @@ while (1) {
 
     if (%hash) {
       my @times = sort {$a<=>$b} keys %hash;
-      my $latestt =  @times[-1];
+      my $latestt =  @times[0];
       my $latest = $hash{$latestt};
 
       # notify the latest file from the list if diferent from previous
