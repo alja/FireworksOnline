@@ -3,19 +3,20 @@
 use Switch;
 use File::Copy;
 use Proc::Killfam;
-use Term::ANSIColor;
 
 use Proc::ProcessTable;
 use strict;
 use vars qw ($FW_ENABLED $FW_DIR);
+use File::Basename;
+use Term::ANSIColor qw(:constants);
 
-$FW_DIR =$ARGV[0];
-unless ( -r $FW_DIR)
-{
-  printf("First argument not a valid directory \n");
-  printf("usage: fireworksOnlineSystem <base_dir> [start|stop|restart|status]\n");
-  exit;
-}
+#  search two levels
+my $FW_DIR = dirname(__FILE__);
+$FW_DIR = dirname($FW_DIR);
+$FW_DIR = dirname($FW_DIR);
+
+my $verbose = 0;
+my $started = 0; 
 
 
 sub readLineFromFile
@@ -35,13 +36,14 @@ sub readLineFromFile
 # edit fw-congif
 sub setEnabled
 {  
-  my $config="$FW_DIR/bin/fw-config.txt";
-  my $configBAQ="$FW_DIR/bin/fw-config.txt.BAQ";
+  my $fwdir = shift;
+  my $enabled = shift;
+  print("setEnabled $fwdir\n");
+  my $config="$fwdir/bin/fw-config.txt";
+  my $configBAQ="$fwdir/bin/fw-config.txt.BAQ";
   copy("$config", "$configBAQ");
   open (MYFILE, ">$config");
   open (MYFILE_BAQ, "$configBAQ");
-  my $enabled = shift;
-
   printf("Edit $config. Set FW_ENABLED to %d\n", $enabled );
 
   while (<MYFILE_BAQ>) {
@@ -60,10 +62,11 @@ sub setEnabled
   unlink $configBAQ;
 }
 
-sub getCmsShowExePid()
+sub getCmsShowExePid
 {
-  if ( -r "$FW_DIR/log/cmsShow_pid") {
-    my $sp = readLineFromFile("$FW_DIR/log/monitor_pid");
+  my $fwdir = shift;
+  if ( -r "$fwdir/log/cmsShow_pid") {
+    my $sp = readLineFromFile("$fwdir/log/monitor_pid");
     my $tree=`pstree -pcl $sp`;
     if ($tree =~ /cmsShow.exe\((\d+)\)/) {
       return $1;
@@ -75,64 +78,58 @@ sub getCmsShowExePid()
 # look for log and than for any process
 sub fwStatus
 {
-  my $verbose = shift;
-
-  print color 'bold yellow';
-  print color 'reset';
-
-
-  if ( -r "$FW_DIR/log/monitor_pid")
-  {
-    my $monitorPid=readLineFromFile("$FW_DIR/log/monitor_pid");
-    if ( -r  "/proc/${monitorPid}")  {
-      printf ("%-13s is running (%4d)  \n","fw-monitor.pl",  $monitorPid);
-    }
-    elsif ($verbose) {
-      printf ("%-13s is NOT running\n", "fw-monitor.pl");
-    }
-
-    my $cpid = getCmsShowExePid();
-    if ( $cpid) {
-      if ( -r"/proc/$cpid") {
-	printf ("%-13s is running (%4d)  \n","cmsShow.exe",  $cpid);
+  my $fwdir = shift;
+    print BOLD, YELLOW, "status [$fwdir]\n", RESET;
+    my $running = 0;
+    if ( -r "$fwdir/log/monitor_pid")
+    {
+      my $monitorPid=readLineFromFile("$fwdir/log/monitor_pid");
+      if ( -r  "/proc/${monitorPid}")  {
+        $running = 1;
+	printf ("%-13s PID (%4d)  \n","fw-monitor.pl",  $monitorPid);
       }
       elsif ($verbose) {
-	printf ("%-13s is NOT running\n", "cmsShow.exe");
+	printf ("%-13s is NOT running\n", "fw-monitor.pl");
+      }
+
+      my $cpid = getCmsShowExePid($fwdir);
+      if ( $cpid) {
+	if ( -r"/proc/$cpid") {
+          $running = 1;
+	  printf ("%-13s PID (%4d)\n","cmsShow.exe ", $cpid);
+	}
+	elsif ($verbose) {
+	  printf ("%-13s is NOT running\n", "cmsShow.exe");
+	}
       }
     }
 
-    my $proc_table=Proc::ProcessTable->new();
-    print color 'bold yellow';
-    foreach my $proc (@{$proc_table->table()}) {
-      if (($proc->cmndline =~ /cmsShow.exe/) && ($proc->pid != $cpid) ) {
-	my $esc = $proc->pid;
-	print "WARNING:: cmsShow.exe($esc) is not beeing monitored !\n";
-      }
-    }
-    print color 'reset';
-
+  if (!$running) {
+    printf("NOT running.\n");
   }
 }
+
+
 
 # set disabled flag and wait fw-monitor and cmsShow to die
 sub fwStop
 {
+  my $fwdir = shift;
   my $monitorPid = 0;
   my $cmsShowPid= 0;
 
-  if ( -r "$FW_DIR/log/monitor_pid") {
-    $monitorPid=readLineFromFile("$FW_DIR/log/monitor_pid");
+  if ( -r "$fwdir/log/monitor_pid") {
+    $monitorPid=readLineFromFile("$fwdir/log/monitor_pid"); 
+    print BOLD, RED, "Terminating $fwdir/bin/fw-monitor and its child processes.\n", RESET; 
+    kill(15, $monitorPid);
   }
 
-  if ( -r "$FW_DIR/log/cmsShow_pid") {
+  if ( -r "$fwdir/log/cmsShow_pid") {
     $cmsShowPid=readLineFromFile("$FW_DIR/log/cmsShow_pid");
   }
 
-  print color 'bold red';
-  setEnabled(0);
-  printf("Terminating fw-monitor with pid [$monitorPid] and its child processes.\n");
-  kill(15, $monitorPid);
-
+  setEnabled($fwdir,0);
+  
   # wait max 3 seconds for processes to terminate
   my $wcnt = 0;
   while ($wcnt < 3)
@@ -142,67 +139,102 @@ sub fwStop
   }
 
   # forcefully kill cmsShow.exe
-  while ( ( -r "/proc/${monitorPid}") || (-r "/proc/${cmsShowPid}")  )
+  while ( ( -r "/proc/${monitorPid}") && (-r "/proc/${cmsShowPid}")  )
   {
-
     if ( -r "/proc/${cmsShowPid}") { 
-      my $exePid = getCmsShowExePid();
+      my $exePid = getCmsShowExePid($fwdir);
       if ($exePid) {
 	printf("Killing cmsShow.exe process with pid [%4d] \n", $exePid);
 	kill(9, $exePid);
 	sleep 2; 
       }
       else {
-	die ("Can't locate cmsShow.exe process \n");
+	print ("Can't locate cmsShow.exe process \n");
       }
     }
-
-    if ( -r "/proc/${monitorPid}")  { 
+    if ( $monitorPid)  { 
       printf("Killing fw-monitor process with pid [%4d] \n", $monitorPid);
       kill(9, $monitorPid);
       sleep 2; 
     }
 
   }
-  
-  print color 'reset';
-  fwStatus(0);
 }
 
 # set display enabled and run fw-monitor.pl not to wait for cron
+
+
 sub fwStart
 {
-  print color 'green';
-  print "Starting online event display.\n";
-  setEnabled(1);
-  system("nohup $FW_DIR/bin/fw-monitor.pl $FW_DIR > /dev/null 2>&1&");
-  print color 'reset';
+  my $fwdir = shift;
+  print BOLD, CYAN, "Starting online event display at $fwdir\n", RESET;
+  setEnabled($fwdir, 1);
+  system("nohup $fwdir/bin/fw-monitor.pl $fwdir > /dev/null 2>&1&");
 }
 
 ################################################################################
 # MAIN
 ################################################################################
 
-if (@ARGV == 1)
+
+my $path = $FW_DIR;
+
+if (@ARGV == 2) {
+  $verbose = 1;
+  $path = $ARGV[1];
+}
+
+my @dirs;
+opendir D, "$path";
+while ($_ = readdir(D))
 {
-  fwStatus(1);
+  my $pref = "$path/$_";
+  next unless -d $pref;
+  my $fn = "$pref/bin/fireworksOnlineSystem";
+  push @dirs, $pref if -x $fn;
+}
+closedir D;
+
+
+if (@ARGV == 0)
+{
+  foreach(@dirs) { fwStatus $_; }
   exit;
 }
 else
 {
-  switch ($ARGV[1]) {
+  switch ($ARGV[0]) {
     case "start" {
-      fwStart();
+      if (@dirs > 1) { print "More one EVD find in $FW_DIR. Must specify subdirectory \n"; exit }
+      fwStart $dirs[0]; 
     }
     case "stop" {
-      fwStop();
+      my $xx;
+      foreach $xx (@dirs) { fwStop $xx; };
+      foreach(@dirs) { fwStatus $_; };
     }
     case "status" {
-      fwStatus(1);
+      foreach(@dirs) { fwStatus $_; };
     }
     case "restart" {
-      fwStop();
-      fwStart();
+
+      if (@dirs > 1) { print "More one EVD find in $FW_DIR. Must specify subdirectory \n"; exit }
+
+      my @dirsTOP;
+      my $top = dirname("$path");
+      print ("... $top ;;;;; \n");
+      opendir X, $top;
+      while ($_ = readdir(X)) {
+	my $pref = "$top/$_";
+	next unless -d $pref;
+	printf "===> $pref\n";
+	my $fn = "$pref/bin/fireworksOnlineSystem";
+	push @dirsTOP, $pref if -x $fn;
+      }
+      closedir X;
+      foreach(@dirsTOP) { fwStop $_; };
+
+      foreach(@dirs) { fwStart $_; };
     }
     else {
       print("Invalid option. \n");
