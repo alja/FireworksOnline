@@ -7,6 +7,14 @@ my $lastFile = "/home/vis/Log/LastFile";
 #my $lastFile = "LastFile";
 
 
+if (@ARGV < 1) {
+  print "usage: findLast.pl <dataDir> \n";
+  exit 1;
+}
+else {
+  $dir = shift(@ARGV);
+}
+
 # Only consider file if it has not been modified for longer than this
 # number of seconds.
 # !!!! MT, 2014-11-05:
