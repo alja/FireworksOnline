@@ -1,6 +1,6 @@
 #!/bin/bash
 set -x
-recmail=alja.mrak.tadel@cern.edu
+recmail=firework-support-sysstat@cern.ch
 host=`hostname`
 pid=`ps --no-headers -opid -C "cmsShow.exe"`
 
