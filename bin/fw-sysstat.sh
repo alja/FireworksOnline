@@ -1,6 +1,6 @@
 #!/bin/bash
-
-recmail=amraktadel@ucsd.edu
+set -x
+recmail=alja.mrak.tadel@cern.edu
 host=`hostname`
 pid=`ps --no-headers -opid -C "cmsShow.exe"`
 
@@ -8,14 +8,15 @@ pid=`ps --no-headers -opid -C "cmsShow.exe"`
 ############################################
 # MEMORY ###################################
 ############################################
-export memLimit=3000000;
+export memLimit=1000000;
+#export memLimit=3000000;
 memMSG=`pmap $pid |tail -1 |  perl -ne 'if (~/total\s+(\d+)K/){ $mem=$1; if ($mem > $ENV{memLimit}) {printf "memory usage exceed\n  ${mem}K > $ENV{memLimit}K\n"};  }'`
 if [ -n "$memMSG" ]
 then
    echo $memMSG
    echo $memMSG |  mail -s "Memory usage $host" "$recmail"
 fi
-exit
+
 ############################################
 # CPU    ###################################
 ############################################
@@ -31,7 +32,7 @@ fi
 ############################################
 # DISK    ##################################
 ############################################
-export diskLimit=60
+export diskLimit=90
 
 for i in /home /eventdisplay
 do
