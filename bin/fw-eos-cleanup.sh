@@ -11,20 +11,31 @@ EOS_PATH=/eos/cms/store/group/visualization/
 EOS_COMMAND=/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select
 
 # use eos quota command to see what fraction of our quota is being used
-CURRENT_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
+CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
 
-# cleanup threshold
-MAX_USAGE=50.0
+# check number of files
+CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
 
-echo "current usage: $CURRENT_USAGE"
-echo "max usage: $MAX_USAGE"
-CHECK=`echo $CURRENT_USAGE'>'$MAX_USAGE | bc -l`
+# cleanup thresholds
+# hard limit on files is 1000000 (1M), clean up at 800k
+MAX_DISK_USAGE=50.0
+MAX_FILE_USAGE=800000
 
-if [ $CHECK -eq 1 ]; then
+echo ""
+echo "current disk usage: $CURRENT_DISK_USAGE"
+echo "max disk usage: $MAX_DISK_USAGE"
+echo ""
+echo "current file usage: $CURRENT_FILE_USAGE"
+echo "max file usage: $MAX_FILE_USAGE"
+echo ""
+
+CHECK_DISK=`echo $CURRENT_DISK_USAGE'>'$MAX_DISK_USAGE | bc -l`
+
+if [ $CHECK_DISK -eq 1 ] || [ $CURRENT_FILE_USAGE -gt $MAX_FILE_USAGE ]; then
     echo "Over cleanup threshold! Taking action."
 else
     echo "Under cleanup threshold. Exiting."
-    echo "usage at $CURRENT_USAGE% for $EOS_PATH" | mail -s "EOS visualization space: no cleanup needed" $MAIL_LIST
+    echo "usage at $CURRENT_DISK_USAGE% for $EOS_PATH" | mail -s "EOS visualization space: no cleanup needed" $MAIL_LIST
     exit 0
 fi
 
@@ -58,19 +69,21 @@ for d in $DEL_DIRS; do
 done
 
 # check quota again
-USAGE_AFTER_DEL=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
-echo "usage after delete: $USAGE_AFTER_DEL"
+DISK_USAGE_AFTER_DEL=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
+echo "disk usage after delete: $DISK_USAGE_AFTER_DEL"
+FILE_USAGE_AFTER_DEL=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
+echo "file usage after delete: $FILE_USAGE_AFTER_DEL"
 
-CHECK_AFTER_DEL=`echo $USAGE_AFTER_DEL'>'$MAX_USAGE | bc -l`
+CHECK_AFTER_DEL=`echo $DISK_USAGE_AFTER_DEL'>'$MAX_DISK_USAGE | bc -l`
 
 # send mail if still over quota
-if [ $CHECK_AFTER_DEL -eq 1 ]; then
+if [ $CHECK_AFTER_DEL -eq 1 ] || [ $FILE_USAGE_AFTER_DEL -gt $MAX_FILE_USAGE ] ; then
     echo "Still over cleanup threshold!! Sending mail."
-    echo "usage at $USAGE_AFTER_DEL% after attempted deletion for $EOS_PATH" | mail -s "EOS visualization space: WARNING" $MAIL_LIST
+    echo "usage at $DISK_USAGE_AFTER_DEL% after attempted deletion for $EOS_PATH" | mail -s "EOS visualization space: WARNING" $MAIL_LIST
     exit 2
 else
     echo "Under cleanup threshold. Hurray!"
-    echo "usage at $USAGE_AFTER_DEL% after deletion for $EOS_PATH" | mail -s "EOS visualization space: cleanup successful" $MAIL_LIST
+    echo "usage at $DISK_USAGE_AFTER_DEL% after deletion for $EOS_PATH" | mail -s "EOS visualization space: cleanup successful" $MAIL_LIST
 fi
 
 exit 1
