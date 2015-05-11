@@ -18,7 +18,7 @@ CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
 
 # cleanup thresholds
 # hard limit on files is 1000000 (1M), clean up at 800k
-MAX_DISK_USAGE=50.0
+MAX_DISK_USAGE=80.0
 MAX_FILE_USAGE=800000
 
 echo ""
@@ -55,7 +55,7 @@ DEL_FILES=`$EOS_COMMAND find -f -ctime +${RETENTION_TIME} ${EOS_PATH} | grep "${
 for f in $DEL_FILES; do
     # remove "path=" from file name, if present
     f_clean=${f/path=/}
-    echo "$EOS_COMMAND rm $f_clean"
+    #echo "$EOS_COMMAND rm $f_clean"
     $EOS_COMMAND rm $f_clean
 done
 
@@ -64,7 +64,7 @@ DEL_DIRS=`$EOS_COMMAND find -d ${EOS_PATH} | grep "${MATCH_STRING}" | grep "ndir
 
 # remove empty directories
 for d in $DEL_DIRS; do
-    echo "$EOS_COMMAND rmdir $d"
+    #echo "$EOS_COMMAND rmdir $d"
     $EOS_COMMAND rmdir $d
 done
 
