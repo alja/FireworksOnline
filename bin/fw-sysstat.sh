@@ -9,7 +9,7 @@ pid=`ps --no-headers -opid -C "cmsShow.exe"`
 # MEMORY ###################################
 ############################################
 export memLimit=4000000;
-memMSG=`pmap $pid |tail -1 |  perl -ne 'if (~/total\s+(\d+)K/){ $mem=$1; if ($mem > $ENV{memLimit}) {printf "memory usage exceed\n  ${mem}K > $ENV{memLimit}K\n"};  }'`
+memMSG=`ps -q $pid -o rss |tail -1 |  perl -ne 'if (~/(\d+)/){ $mem=$1; if ($mem > $ENV{memLimit}) {printf "memory usage exceed\n  ${mem}K > $ENV{memLimit}K\n"};  }'`
 if [ -n "$memMSG" ]
 then
    echo $memMSG
