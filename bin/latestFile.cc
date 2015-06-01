@@ -25,17 +25,20 @@ bool getLatestFileInSubdir(FileSystem& fileSystem, std::string& latest_file, std
              });
 
    // check the latest jsn file and then return root file
-   static std::string ext = ".jsn";
+   std::string ext = ".jsn";
    for (DirectoryList::ConstIterator it = dls->Begin(); it != dls->End(); ++it)
    {
       const DirectoryList::ListEntry* le = *it;
-      // printf("checking [%s] \n", le->GetName().c_str());
-      std::string::size_type idx = le->GetName().find_last_of(ext);
-      if(idx != std::string::npos) {
-         // printf("found %s \n", le->GetName().c_str());
-         latest_file = subDir + "/" +le->GetName().substr(0, idx- ext.size()+1) + ".root";
-         return true;
-      }      
+      printf("checking [%s] \n", le->GetName().c_str());
+      size_t xxx = 0;
+      if (le->GetName().size() > 4) {
+          std::string xxx = le->GetName().substr(le->GetName().size()-ext.size());
+          if(xxx == ext) {
+              // printf("found %s \n", le->GetName().c_str());
+              latest_file = subDir + "/" +le->GetName().substr(0, le->GetName().size()- ext.size()) + ".root";
+              return true;
+          }      
+      }
    }
    return false;
 }
