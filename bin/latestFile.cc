@@ -9,10 +9,14 @@
 #include <stdio.h>
 #include <algorithm>
 
+#include "TFile.h"
+#include "TTree.h"
+
+
 using namespace XrdCl;
 
 // to compile
-// g++ -std=c++11 -I $XRD/include/xrootd -l XrdCl latestFile.cc
+// g++ -std=c++11 -g -lXrdCl -lTree -lRIO -lCore  -I/usr/include/xrootd -I/opt/root/include/ latestFile.cc -o latestEOSFile -L/opt/root/lib
 
 bool getLatestFileInSubdir(FileSystem& fileSystem, std::string& latest_file, std::string subDir)
 { 
@@ -29,20 +33,37 @@ bool getLatestFileInSubdir(FileSystem& fileSystem, std::string& latest_file, std
    for (DirectoryList::ConstIterator it = dls->Begin(); it != dls->End(); ++it)
    {
       const DirectoryList::ListEntry* le = *it;
-      printf("checking [%s] \n", le->GetName().c_str());
+      // printf("checking [%s] \n", le->GetName().c_str());
       size_t xxx = 0;
       if (le->GetName().size() > 4) {
-          std::string xxx = le->GetName().substr(le->GetName().size()-ext.size());
-          if(xxx == ext) {
-              // printf("found %s \n", le->GetName().c_str());
-              latest_file = subDir + "/" +le->GetName().substr(0, le->GetName().size()- ext.size()) + ".root";
-              return true;
-          }      
-      }
-   }
-   return false;
-}
+         std::string xxx = le->GetName().substr(le->GetName().size()-ext.size());
+         if(xxx == ext) {
+            latest_file = "root://eoscms.cern.ch/" + subDir + "/" +le->GetName().substr(0, le->GetName().size()- ext.size()) + ".root";
+            //  printf("found %s ---------------------- \n", latest_file.c_str());
+            TFile *newFile = TFile::Open(latest_file.c_str());
+            if(!newFile) {
+               // printf("open failed\n");
+               continue;
 
+            }
+
+            if (newFile->Get("Events"))
+            {
+               TTree *events = dynamic_cast<TTree*>(newFile->Get("Events"));
+               // printf("NumEntries %d \n", events->GetEntries());
+               if (events->GetEntries()) {
+                  return true;
+               }
+            }
+            // printf("No event tree \n");
+            newFile->Close();
+            delete newFile;
+
+         }
+      }
+      return false;
+   }
+}
 int main(int argc, char *argv[])
 {
    std::string mUrl = "eoscms.cern.ch";
@@ -71,7 +92,8 @@ int main(int argc, char *argv[])
        std::string subDir =  mTopDir + "/run";
        subDir += std::to_string(element);
        if (getLatestFileInSubdir(fileSystem, lf, subDir)) {
-          printf("root://eoscms.cern.ch/%s\n", lf.c_str());
+          //  printf("root://eoscms.cern.ch/%s\n", lf.c_str());
+          printf("%s\n", lf.c_str());
           break;
        }
    }
