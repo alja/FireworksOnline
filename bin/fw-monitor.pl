@@ -148,7 +148,7 @@ sub notifyNewDataFile
   if (($afsFileName =~ m/\.root$/o) && ($$fw_file ne $afsFileName) )
   {
     printf("Notify new file $afsFileName \n"); 
-    system(" echo $afsFileName | nc -w 10 localhost $FW_PORT");
+    system(" echo $afsFileName | nc -4 -w 10 localhost $FW_PORT");
     $$fw_file = $afsFileName;
   }
 }
@@ -399,13 +399,14 @@ sub provideImages
 	provideImages($scpTarget, \$latest_screenshot);
 	$img_cnt = 0;
 
-	# send status info to scp host and a warning mail if delay is more than 20 min
+	# send status info to scp host and a warning mail if there is no new file for long time
 	my $time =  time();
 	my $dtime = (stat "$latest_data_file")[9];
 	my $stime = (stat "$latest_screenshot")[9];
-	if ($live_cnt >= 1200) {
+        my $data_age_warning = 36000;
+	if ($live_cnt >= $data_age_warning) {
 	  my $delay = $time - $stime;
-	  if ($delay >= 1200)
+	  if ($delay >= $data_age_warning)
 	  {
             my $dmin = int(${delay}/60);
 	    printf("\nWARNING:$dmin minutes delay to load new data!\n");
