@@ -9,12 +9,13 @@ use strict;
 use vars qw ($FW_ENABLED $FW_DIR);
 use File::Basename;
 use Term::ANSIColor qw(:constants);
+use Cwd 'abs_path';
 
 #  search two levels
 my $FW_DIR = dirname(__FILE__);
+$FW_DIR = abs_path($FW_DIR);
 $FW_DIR = dirname($FW_DIR);
 $FW_DIR = dirname($FW_DIR);
-
 my $verbose = 0;
 my $started = 0; 
 
