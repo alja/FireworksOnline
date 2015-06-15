@@ -19,6 +19,7 @@ use vars qw
 
 
 my $cmsShow_pid = 0;
+my $ssh_option=0;
 
 # get base directory
 die ("Can't start the fw-monitor.pl script without base directory argument.") unless (@ARGV == 1);
@@ -155,7 +156,7 @@ sub notifyNewDataFile
 sub provideImages
 {  
   # get scp guest and user name from configuration
-  
+
   my $scpTarget = shift; 
   my $old_screenshot = shift;
 
@@ -166,9 +167,15 @@ sub provideImages
     $scpHost = "$1"."\@"."$2";
     $scpDir = $3;
   }
-  else
+  elsif ($scpTarget =~ m/(.*):(.*)/)
   {
+    $scpHost = "$1";
+    $scpDir = $2;
+  }
+  else
+  { 
     fwQuit("Can't get valid scp host from $scpTarget.");
+    die;
   }
 
   # get latest series of images produced with cmsShow option --auto-save-all-views
@@ -293,8 +300,6 @@ sub provideImages
     }
   }
 
-
-  my $ssh_option=0;
   if ($FW_SSH_PRIVATE_KEY) {
     if ( -r $FW_SSH_PRIVATE_KEY ) {
        $ssh_option = " -i $FW_SSH_PRIVATE_KEY ";
