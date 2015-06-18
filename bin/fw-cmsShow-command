@@ -5,7 +5,7 @@
 dataFile=$1;
 ln -s -f ${FW_DIR}/log/cmsShow.$$.log ${FW_DIR}/log/cmsShow.log
 
-options=" --log 0 --chain 10  --port $FW_PORT -p 2 --live"
+options=" --sync-all-views --log 0 --chain 10  --port $FW_PORT -p 2 --live"
 
 echo "Starting cmsShow $options $dataFile";
 
