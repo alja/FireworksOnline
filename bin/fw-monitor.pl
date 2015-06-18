@@ -19,7 +19,7 @@ use vars qw
 
 
 my $cmsShow_pid = 0;
-my $ssh_option=0;
+my $ssh_option="";
 
 # get base directory
 die ("Can't start the fw-monitor.pl script without base directory argument.") unless (@ARGV == 1);
