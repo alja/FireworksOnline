@@ -104,10 +104,8 @@ bool getLatestFileInSubdir(FileSystem& fileSystem, std::string& latest_file, std
             if (debug) printf("No event tree \n");
             newFile->Close();
             delete newFile;
-
          }
       }
-      return false;
    }
 }
 
