@@ -23,6 +23,7 @@ def formatted_date(t):
 
 def process_file(file):
     print 'process file: %s' % file
+    logf = open('testFiles.log', 'a')
     modifyfile = os.path.getmtime(file)
     createfile = os.path.getctime(file)
     firstevt = 0
@@ -43,12 +44,14 @@ def process_file(file):
         print 'file modified on %s' % formatted_date(modifyfile)
         print 'first event taken on %s' % formatted_date(firstevt)
         print 'last event taken on %s' % formatted_date(lastevt)
+        logf.write('file %s created on %s, last modified on %s, first event taken on %s, last event taken on %s, delta(creat-first)=%f\n' % (file, formatted_date(createfile), formatted_date(modifyfile), formatted_date(firstevt), formatted_date(lastevt), float(createfile-firstevt)/60.))
         h_dmin_filecreate_firstevt.Fill(float(createfile-firstevt)/60.)
         h_dmin_filemodify_firstevt.Fill(float(modifyfile-firstevt)/60.)
         h_dmin_filecreate_lastevt.Fill(float(createfile-lastevt)/60.)
         h_dmin_filemodify_lastevt.Fill(float(modifyfile-lastevt)/60.)
         h_dmin_lastevt_firstevt.Fill(float(lastevt-firstevt)/60.)
     myfile.Close()
+    logf.close()
 
 def testRunsFromRR(path, outpath):
     try:
