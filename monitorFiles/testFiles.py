@@ -1,4 +1,4 @@
-import os.path, time, datetime, glob, sys
+import os.path, time, datetime, glob, sys, exceptions
 import re, json as json
 from rrapi import RRApi, RRApiError
 sys.argv.append( '-b' )
@@ -9,6 +9,7 @@ ROOT.AutoLibraryLoader.enable()
 #these are global variables
 minDuration = 30
 nHours = 2
+nDaysForQuery = 2
 h_dmin_filecreate_firstevt = ROOT.TH1F("dmin_filecreate_firstevt", "deltaT(min) filecreate-firstevt", 60, 0, 60)
 h_dmin_filemodify_firstevt = ROOT.TH1F("dmin_filemodify_firstevt", "deltaT(min) filemodify-firstevt", 60, 0, 60)
 h_dmin_filecreate_lastevt = ROOT.TH1F("dmin_filecreate_lastevt", "deltaT(min) filecreate-lastevt", 60, 0, 60)
@@ -29,29 +30,45 @@ def process_file(file):
     firstevt = 0
     lastevt = 0
     myfile = ROOT.TFile.Open(file)
+    if not myfile:
+        print 'error opening file'
+        logf.close()
+        return
     mytree=myfile.Get('Events')
+    if not mytree:
+        print 'error retrieving tree Events'
+        myfile.Close()
+        logf.close()
+        return
     mytree.SetBranchStatus("*",0)
     mytree.SetBranchStatus("EventAuxiliary",1)
     i = 0
     size = mytree.GetEntries()
-    for event in mytree:
-        #print event.EventAuxiliary.time().unixTime()
-        if i==0: firstevt = event.EventAuxiliary.time().unixTime()
-        i += 1
-        if i==size: lastevt = event.EventAuxiliary.time().unixTime()
-    if size>0:
-        print 'file created on %s' % formatted_date(createfile)
-        print 'file modified on %s' % formatted_date(modifyfile)
-        print 'first event taken on %s' % formatted_date(firstevt)
-        print 'last event taken on %s' % formatted_date(lastevt)
-        logf.write('file %s created on %s, last modified on %s, first event taken on %s, last event taken on %s, delta(creat-first)=%f\n' % (file, formatted_date(createfile), formatted_date(modifyfile), formatted_date(firstevt), formatted_date(lastevt), float(createfile-firstevt)/60.))
-        h_dmin_filecreate_firstevt.Fill(float(createfile-firstevt)/60.)
-        h_dmin_filemodify_firstevt.Fill(float(modifyfile-firstevt)/60.)
-        h_dmin_filecreate_lastevt.Fill(float(createfile-lastevt)/60.)
-        h_dmin_filemodify_lastevt.Fill(float(modifyfile-lastevt)/60.)
-        h_dmin_lastevt_firstevt.Fill(float(lastevt-firstevt)/60.)
-    myfile.Close()
-    logf.close()
+    # error handling, to catch corrupted files
+    try:
+        for event in mytree:
+            #print event.EventAuxiliary.time().unixTime()
+            if i==0: firstevt = event.EventAuxiliary.time().unixTime()
+            i += 1
+            if i==size: lastevt = event.EventAuxiliary.time().unixTime()
+        if size>0:
+            print 'file created on %s' % formatted_date(createfile)
+            print 'file modified on %s' % formatted_date(modifyfile)
+            print 'first event taken on %s' % formatted_date(firstevt)
+            print 'last event taken on %s' % formatted_date(lastevt)
+            logf.write('file %s created on %s, last modified on %s, first event taken on %s, last event taken on %s, delta(creat-first)=%f\n' % (file, formatted_date(createfile), formatted_date(modifyfile), formatted_date(firstevt), formatted_date(lastevt), float(createfile-firstevt)/60.))
+            h_dmin_filecreate_firstevt.Fill(float(createfile-firstevt)/60.)
+            h_dmin_filemodify_firstevt.Fill(float(modifyfile-firstevt)/60.)
+            h_dmin_filecreate_lastevt.Fill(float(createfile-lastevt)/60.)
+            h_dmin_filemodify_lastevt.Fill(float(modifyfile-lastevt)/60.)
+            h_dmin_lastevt_firstevt.Fill(float(lastevt-firstevt)/60.)
+            myfile.Close()
+            logf.close()
+    except exceptions.RuntimeError, e:
+        print 'caught error:',e
+        myfile.Close()
+        logf.close()
+        return
 
 def testRunsFromRR(path, outpath):
     try:
@@ -67,25 +84,32 @@ def testRunsFromRR(path, outpath):
         ##print api.templates('GLOBAL', 'runsummary')
         ##print api.count('GLOBAL', 'runsummary')
 
-        #find out the last run we cleaned up
-        lastCleanedRun = 0
-        for line in reversed(list(open("/home/vis/clearTempArea.log"))):
-            if ('.root' in line):
-                myline = line.rstrip() 
-                #print(myline)
-                #print(myline.rfind('run'))
-                #print(myline.rfind('_ls'))
-                lastCleanedRun = myline[myline.rfind('run')+3:myline.rfind('_ls')]
-                #print(lastCleanedRun)
-                break
+        # #find out the last run we cleaned up
+        # lastCleanedRun = 0
+        # for line in reversed(list(open("/home/vis/clearTempArea.log"))):
+        #     if ('.root' in line):
+        #         myline = line.rstrip() 
+        #         #print(myline)
+        #         #print(myline.rfind('run'))
+        #         #print(myline.rfind('_ls'))
+        #         lastCleanedRun = myline[myline.rfind('run')+3:myline.rfind('_ls')]
+        #         #print(lastCleanedRun)
+        #         break
 
         #Example queries
         #print api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'csv', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'startTime': '>= 2015-04-17', 'duration': '>= 300', 'datasetExists': '= true'}, order = ['number asc'] )
         #myjson = api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'json', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'startTime': '>= 2015-04-17', 'duration': '>= 300', 'datasetExists': '= true'}, order = ['number asc'] )
+        #print 'search for runs after '+str(lastCleanedRun)+' of at least '+str(minDuration)+' secs'
+        #print api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'csv', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'number': '> '+lastCleanedRun, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
+        #myjson = api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'json', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'number': '> '+lastCleanedRun, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
 
-        print 'search for runs after '+str(lastCleanedRun)+' of at least '+str(minDuration)+' secs'
-        print api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'csv', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'number': '> '+lastCleanedRun, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
-        myjson = api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'json', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'number': '> '+lastCleanedRun, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
+        # query runs from past N days
+        pastdate = datetime.date.today() - datetime.timedelta(nDaysForQuery)
+        pastdate_str = pastdate.strftime('%Y-%m-%d')
+        
+        print 'search for runs after '+pastdate_str+' of at least '+str(minDuration)+' secs'
+        print api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'csv', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'startTime': '>= '+pastdate_str, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
+        myjson = api.data( workspace = 'GLOBAL', table = 'runsummary', template = 'json', columns = ['number', 'events', 'lsCount', 'duration', 'startTime', 'stopTime', 'datasetExists'], filter = {'startTime': '>= '+pastdate_str, 'duration': '>= '+str(minDuration), 'datasetExists': '= true'}, order = ['number asc'] )
 
         #get what time is it now
         now = time.gmtime()
