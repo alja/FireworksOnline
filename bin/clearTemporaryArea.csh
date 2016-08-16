@@ -31,17 +31,17 @@ set retention_time2=12
 #
 #this is 13 GB: 12882980
 
-set dquota=50000000
+set dquota=150000000
 
 #
 # minfree (in kB)
 #
-set minfree=10000000
+set minfree=50000000
 
 @ maxdisk= $dquota - $minfree
 
 if ($verb) then
-    echo Setting maxdisk to $maxdisk
+    echo Setting maxdisk to $maxdisk. Date is `date`
 endif
 #
 # get disk used
@@ -69,11 +69,13 @@ endif
 
 #/usr/sbin/tmpwatch --verbose -d --mtime $retention_time .
 # first test - see if you can clean applying retention time
+#  also allow directories to be deleted in this first pass
 if ($used > $maxdisk) then
 if ($verb) then
     echo Running tmpwatch
 endif
- /usr/sbin/tmpwatch --verbose -x ".snapshot" -d --mtime $retention_time . 
+# /usr/sbin/tmpwatch --verbose -x ".snapshot" -d --mtime $retention_time . 
+ /usr/sbin/tmpwatch --verbose -x ".snapshot" --mtime $retention_time . 
 endif
 #
 # now look whether situation is good
@@ -92,6 +94,7 @@ exit 2
 endif
 #
 # try with retentiontime2 before going on
+# do not allow directories to be deleted here
 #
  /usr/sbin/tmpwatch --verbose -x ".snapshot" -d --mtime $retention_time2 .
 set newused=`du -s |awk '{print $1}'`
@@ -110,7 +113,7 @@ set oldfile="aaa"
 while ($newused > $maxdisk)
  #
  # find the oldest file
- set file=`ls -t1 *root|tail -1`
+ set file=`ls -t1 */*root|tail -1`
  if ($file =="") then
     echo Not enough files to kill, I bail out
     exit 4 

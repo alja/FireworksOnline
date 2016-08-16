@@ -23,7 +23,7 @@ def formatted_date(t):
 
 def process_file(file):
     print 'process file: %s' % file
-    logf = open('testFiles.log', 'a')
+    logf = open('/home/vis/Fireworks/monitorFiles/testFiles.log', 'a')
     modifyfile = os.path.getmtime(file)
     createfile = os.path.getctime(file)
     firstevt = 0
@@ -171,6 +171,10 @@ def main():
         os.system("scp h_dmin_filecreate_lastevt.png evtdisp@srv-c2c03-01--cms.cern.ch:images/")
         os.system("scp h_dmin_lastevt_firstevt.png evtdisp@srv-c2c03-01--cms.cern.ch:images/")
         os.system("scp h_eff.png evtdisp@srv-c2c03-01--cms.cern.ch:images/")
+        os.system("cp h_dmin_filecreate_firstevt.png /eventdisplayweb/images/")
+        os.system("cp h_dmin_filecreate_lastevt.png /eventdisplayweb/images/")
+        os.system("cp h_dmin_lastevt_firstevt.png /eventdisplayweb/images/")
+        os.system("cp h_eff.png /eventdisplayweb/images/")
         os.chdir(olddir)
 
 if __name__ == '__main__':
