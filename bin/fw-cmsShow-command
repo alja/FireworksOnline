@@ -5,8 +5,13 @@
 dataFile=$1;
 ln -s -f ${FW_DIR}/log/cmsShow.$$.log ${FW_DIR}/log/cmsShow.log
 
-options=" --sync-all-views --log 0 --chain 10  --port $FW_PORT -p 2 --live"
+options="--config-file ${FW_DIR}/config/collisions-20160825_5screens_plusLego2.fwc";
+
+options+=" --no-version-check --auto-save-all-views $FW_DIR/screenshots/online_ --log 0 --chain 10  --port $FW_PORT -p 5 --live --free-palette"
+options+=" --auto-save-height 800"
+options+=" --sync-all-views"
 
 echo "Starting cmsShow $options $dataFile";
 
-/home/vis/cmsShow-7.0/cmsShow $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1
+cd /home/vis/cmsShow-9.0-2
+./cmsShow $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1

@@ -2,24 +2,15 @@
 use strict;
 
 my $maxAgeSec = 6000000;
-my $dir  = "/eventdisplay/";
+my $dir  = "/eventdisplay/run*/";
 my $lastFile = "/home/vis/Log/LastFile";
 #my $lastFile = "LastFile";
-
-
-if (@ARGV < 1) {
-  print "usage: findLast.pl <dataDir> \n";
-  exit 1;
-}
-else {
-  $dir = shift(@ARGV);
-}
 
 # Only consider file if it has not been modified for longer than this
 # number of seconds.
 # !!!! MT, 2014-11-05:
 # !!!! This (200) is a workaround for DAQ copying file in to NFS for hours.
-my $minFileAge = 5;
+my $minFileAge = 10;
 
 sub readLineFromFile
 {
@@ -38,6 +29,7 @@ while (1) {
     my $ref    = "/tmp/cmsShow-tmp.txt";
     system("touch -d \"-$maxAgeSec seconds\" $ref");
     my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \\*.root -newer $ref `;
+    #my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \\*streamEvDOutput2_dqmcluster.root -newer $ref `;
     my @candidates = split("\n",$lc);
     my $current_time = time;
     my %hash;
@@ -45,8 +37,8 @@ while (1) {
       my $cnd = $_;
       my $delta =  $current_time - (stat($cnd))[9];
       if ($delta > $minFileAge) {
-#       print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
-        $hash{ $delta } = $cnd;
+#	print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
+	$hash{ $delta } = $cnd;
       }
     }
     if (%hash) {
@@ -57,9 +49,9 @@ while (1) {
       ### MT 2014-11-07: Hack ... check if latest file can be opened by root
       if (system("/home/vis/testFile.sh $latest"))
       {
-          print "Latest file '$latest' can not be opened by root, sleeping 5 seconds;\n";
-          sleep 1;
-          next;
+	  print "Latest file '$latest' can not be opened by root, sleeping 5 seconds;\n";
+	  sleep 1;
+	  next;
       }
 
       # notify the latest file from the list if diferent from previous
@@ -67,10 +59,10 @@ while (1) {
       # sort files by modification time
       if ($sp ne $latest ) {
         system("echo $hash{$latestt} > $lastFile");
-        print localtime, " new LastFile = $latest\n";
+	print localtime, " new LastFile = $latest\n";
       }
       else {
-#       printf("No new file.\n");
+#	printf("No new file.\n");
       }
 
     }

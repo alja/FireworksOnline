@@ -62,9 +62,11 @@ cd ~
 
 echo "vipMode.sh started on machine 40, time set to $1 minutes" | mail -s "P5: vipMode has started" gzevi@cern.ch giuseppe.cerati@cern.ch olivito@cern.ch
 killLatestFile
-echo "Add ttbar file to Log/LastFile"
+echo "Add VIP file to Log/LastFile"
 cp ~/Log/LastFile ~/Log/LastFileBeforeVIP
-echo ~/ttbarRelVal2.root > ~/Log/LastFile
+#echo ~/ttbarRelVal2.root > ~/Log/LastFile
+echo ~/VipData/run254790_ls0100to0150_streamEvDOutput2_dqmcluster.root  > ~/Log/LastFile
+#test echo ~/RelVal900.root  > ~/Log/LastFile
 #stopStart
 if [ $timeLeft -gt 240 ]
 then
@@ -73,17 +75,21 @@ then
 fi
 # Trick to switch files every 80 minutes (current ttbar file has 1200 events, so around 100 minutes
 setLink=0
-while [ $timeLeft -gt 80 ]; do
-    sleep 80m
-    timeLeft=`expr $timeLeft - 80`    
+while [ $timeLeft -gt 40 ]; do
+    sleep 40m
+    timeLeft=`expr $timeLeft - 40`    
     if [ $setLink = 0 ]
     then
 	echo "Pushing linked ttbar file to loop. Time remaining is ${timeLeft}"
-	echo ~/ttbarRelVal2_link.root > ~/Log/LastFile
+#	echo ~/ttbarRelVal2_link.root > ~/Log/LastFile
+	echo ~/VipData/run254790_ls0100to0150_streamEvDOutput2_dqmcluster_link.root > ~/Log/LastFile
+#test	echo ~/RelVal900.root  > ~/Log/LastFile
 	setLink=1
     else
 	echo "Pushing original ttbar file to loop. Time remaining is ${timeLeft}"
-	echo ~/ttbarRelVal2.root > ~/Log/LastFile
+#	echo ~/ttbarRelVal2.root > ~/Log/LastFile
+	echo ~/VipData/run254790_ls0100to0150_streamEvDOutput2_dqmcluster.root > ~/Log/LastFile
+#test	echo ~/RelVal900.root  > ~/Log/LastFile
 	setLink=0
     fi
 done
