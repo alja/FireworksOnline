@@ -14,7 +14,8 @@ EOS_COMMAND=/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.sele
 CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
 
 # check number of files
-CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
+#CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
+CURRENT_FILE_USAGE=`$EOS_COMMAND find --count -f ${EOS_PATH} | awk '{print $1;}' | awk -F'=' '{print $2;}'`
 
 # cleanup thresholds
 # hard limit on files is 1000000 (1M), clean up at 800k
