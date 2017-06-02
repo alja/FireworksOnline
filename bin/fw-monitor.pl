@@ -12,14 +12,13 @@ use Net::Domain qw(hostname hostfqdn hostdomain domainname);
 use vars qw
     ($FW_ENABLED $FW_DISPLAY
      $FW_NEW_FILE_NOTIFICATION $FW_NOTIFY_NEW_FILE_TIMEOUT
-     $FW_PORT $FW_LATEST_FILE $FW_DEBUG
+     $FW_PORT $FW_DATA_DIR $FW_DEBUG
      $FW_SCP_CMSSHOW_IMAGE_ENABLE $FW_SCP_DESKTOP_IMAGE_ENABLE
      $FW_TRANSFER_IMAGE_TIMEOUT 
-     $FW_SCP_TARGET $FW_SSH_PRIVATE_KEY $FW_MAIL_LIST);
+     $FW_SCP_TARGET $FW_MAIL_LIST);
 
 
 my $cmsShow_pid = 0;
-my $ssh_option="";
 
 # get base directory
 die ("Can't start the fw-monitor.pl script without base directory argument.") unless (@ARGV == 1);
@@ -86,39 +85,39 @@ sub readLineFromFile
 
 sub setMonitorLog
 {
-  # remove old log files
-  {
-    my $wktime=time();
-    my $maxAge=1209600;
-    my $DIR;
-    opendir (DIR, "$FW_DIR/log/");
-    while (my $file = readdir DIR) {
-      if ( "$file" =~ m/((?:monitor)|(?:cmsShow))\.\d+\.log/ )  {
-	my $mtime = (stat "$FW_DIR/log/$file")[9];
-	my $dif = $wktime - $mtime ;
-	if ($dif > $maxAge) {
-	  print($wktime, " remove old log $file with age $dif \n");
-	  unlink "$FW_DIR/log/$file";
-	}
-      }
-    }
-  }
+   # remove old log files
+   {
+     my $wktime=time();
+     my $maxAge=1209600;
+     my $DIR;
+     opendir (DIR, "$FW_DIR/log/");
+     while (my $file = readdir DIR) {
+       if ( "$file" =~ m/((?:monitor)|(?:cmsShow))\.\d+\.log/ )  {
+	 my $mtime = (stat "$FW_DIR/log/$file")[9];
+	 my $dif = $wktime - $mtime ;
+	 if ($dif > $maxAge) {
+	   print($wktime, " remove old log $file with age $dif \n");
+  	   unlink "$FW_DIR/log/$file";
+	 }
+       }
+     }
+   }
 
-  # remove old symbolic lik
-  if ( -l "${FW_DIR}/log/monitor.log") { unlink("${FW_DIR}/log/monitor.log") };
+   # remove old symbolic lik
+   if ( -l "${FW_DIR}/log/monitor.log") { unlink("${FW_DIR}/log/monitor.log") };
 
-  # set log file
-  my $mpid=$$;
-  my $monitorLogFile = "${FW_DIR}/log/monitor.${mpid}.log";
-  if (1) {
-    open STDOUT, '>>', $monitorLogFile or fwQuit "fw-monitor: Can't redirect STDOUT: $!";
-    open STDERR, ">&STDOUT" or fwQuit "fw-monitor: Can't dump STDOUT: $!";
-  }
+   # set log file
+   my $mpid=$$;
+   my $monitorLogFile = "${FW_DIR}/log/monitor.${mpid}.log";
+   if (1) {
+      open STDOUT, '>>', $monitorLogFile or fwQuit "fw-monitor: Can't redirect STDOUT: $!";
+      open STDERR, ">&STDOUT" or fwQuit "fw-monitor: Can't dump STDOUT: $!";
+   }
 
-  symlink( $monitorLogFile, "${FW_DIR}/log/monitor.log");
+   symlink( $monitorLogFile, "${FW_DIR}/log/monitor.log");
 
-  my $now = localtime();
-  print( "$now Starting fw-monitor with pid $$ \n");
+   my $now = localtime();
+   print( "$now Starting fw-monitor with pid $$ \n");
 }
 
 sub setDisplay
@@ -139,16 +138,16 @@ sub notifyNewDataFile
 {
   my $fw_file = shift;
 
-  my $afsFileName = readLineFromFile("$FW_LATEST_FILE");
+  my $afsFileName = readLineFromFile("$FW_DATA_DIR/Log/LastFile");
 
   my $ntime = localtime();
   my $afsFileTimeStamp = localtime((stat $afsFileName)[9]);
-  print ("$ntime Check new file every $FW_NOTIFY_NEW_FILE_TIMEOUT seconds. Looking at $FW_LATEST_FILE.\nLatest reconstructed file $afsFileName updated at $afsFileTimeStamp.\n");
-  
+  print ("$ntime Check new file every $FW_NOTIFY_NEW_FILE_TIMEOUT seconds. Looking at $FW_DATA_DIR/Log/LastFile.\nLatest reconstructed file $afsFileName updated at $afsFileTimeStamp.\n");
+ 
   if (($afsFileName =~ m/\.root$/o) && ($$fw_file ne $afsFileName) )
   {
     printf("Notify new file $afsFileName \n"); 
-    system(" echo $afsFileName | nc -4 -w 10 localhost $FW_PORT");
+    system(" echo $afsFileName | nc -w 10 localhost $FW_PORT");
     $$fw_file = $afsFileName;
   }
 }
@@ -156,7 +155,7 @@ sub notifyNewDataFile
 sub provideImages
 {  
   # get scp guest and user name from configuration
-
+   
   my $scpTarget = shift; 
   my $old_screenshot = shift;
 
@@ -167,15 +166,9 @@ sub provideImages
     $scpHost = "$1"."\@"."$2";
     $scpDir = $3;
   }
-  elsif ($scpTarget =~ m/(.*):(.*)/)
-  {
-    $scpHost = "$1";
-    $scpDir = $2;
-  }
   else
-  { 
+  {
     fwQuit("Can't get valid scp host from $scpTarget.");
-    die;
   }
 
   # get latest series of images produced with cmsShow option --auto-save-all-views
@@ -189,7 +182,7 @@ sub provideImages
   my $ktime = time();
   
   my $fexp='(.*)_(\d+)_(\d+)_(\d+)_([a-zA-Z0-9]+)(_\d)?.png';
-  
+   
   while (my $file = readdir $dh) {
     if ( $file =~ /$fexp/o ) {
       my $mtime = (stat "${ssDir}/${file}")[9];
@@ -225,15 +218,24 @@ sub provideImages
 	  {
 	    my $stdName = "$5$6.png";
 	    copy("${ssDir}/${newImg}", "${ssDir}/${stdName}") or fwQuit "Copy [${ssDir}/${newImg}] [${ssDir}/${stdName}] failed: $!";
-
-	    my $newStdName = "new-$stdName";
-
-	    debugPrint("scp $newImg as ${newStdName} \n"); 
-	    system("scp $ssh_option ${ssDir}/${stdName} ${scpTarget}/${newStdName}");
-	    system("ssh $ssh_option ${scpHost} \"mv ${scpDir}/${newStdName} ${scpDir}/${stdName}\"");
-	    if ( $6 eq "_1" ) {
-	      system("ssh $ssh_option ${scpHost} \"cp ${scpDir}/${stdName} ${scpDir}/$5.png\"");
-	    }
+#NoSCP	    if ( -r "$ENV{HOME}/.ssh/image_transfer" )
+#NoSCP	    {
+#NoSCP	      my $newStdName = "new-$stdName";
+#NoSCP
+#NoSCP	      debugPrint("scp $newImg as ${newStdName} \n"); 
+#NoSCP	      system("scp -i $ENV{HOME}/.ssh/image_transfer ${ssDir}/${stdName} ${scpTarget}/${newStdName}");
+#NoSCP	      system("ssh -i $ENV{HOME}/.ssh/image_transfer ${scpHost} \"mv ${scpDir}/${newStdName} ${scpDir}/${stdName}\"");
+#NoSCP	      if ( $6 eq "_1" ) {
+#NoSCP	        system("ssh -i $ENV{HOME}/.ssh/image_transfer ${scpHost} \"cp ${scpDir}/${stdName} ${scpDir}/$5.png\"");
+#NoSCP	      }
+#NoSCP	    }
+#NoSCP	    else {
+#NoSCP	      print("Can't scp images to web server.\n");
+#NoSCP	    }
+	    # also copy to new area
+	    debugPrint("copying ${ssDir}/${newImg} as /eventdisplayweb/images/scx5scr41/${stdName} \n");
+	    #copy("${ssDir}/${stdName}", "/eventdisplayweb/images/scx5scr41/${stdName}") or fwQuit "Copy [${ssDir}/${stdName}] [/eventdisplayweb/images/scx5scr41/${stdName}] failed: $!";
+	    copy("${ssDir}/${stdName}", "/eventdisplayweb/images/scx5scr41/${stdName}") or print("Copy [${ssDir}/${stdName}] [/eventdisplayweb/images/scx5scr41/${stdName}] failed: $! \n");
 	  }
 	}
       }
@@ -246,11 +248,17 @@ sub provideImages
   if ($FW_SCP_DESKTOP_IMAGE_ENABLE) {
     my $xwdName = "xwd-root.png";
     my $newXwdName = "new-$xwdName";
-    system("xwd -root | convert - ${ssDir}/${xwdName}");  
+    #    system("xwd -root | convert - ${ssDir}/${xwdName}");
+    system("xwd -root | convert - -fill black -draw 'rectangle 0,0,1280,2160' ${ssDir}/${xwdName}");  
 
-    debugPrint("scp $ssh_option  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName} \n");
-    system("scp $ssh_option  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName}");
-    system("ssh -2 $ssh_option  ${scpHost} \"mv ${scpDir}/${newXwdName} ${scpDir}/${xwdName}\"");
+#NoSCP    debugPrint("scp -i $ENV{HOME}/.ssh/image_transfer  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName} \n");
+#NoSCP    system("scp -i $ENV{HOME}/.ssh/image_transfer  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName}");
+#NoSCP    system("ssh -2 -i $ENV{HOME}/.ssh/image_transfer  ${scpHost} \"mv ${scpDir}/${newXwdName} ${scpDir}/${xwdName}\"");
+    # also copy to new area
+    debugPrint("copying ${ssDir}/${xwdName} as /eventdisplayweb/images/scx5scr41/${xwdName} \n");
+    #copy("${ssDir}/${xwdName}", "/eventdisplayweb/images/scx5scr41/${xwdName}") or fwQuit "Copy [${ssDir}/${xwdName}] [/eventdisplayweb/images/scx5scr41/${xwdName}] failed: $!";
+    copy("${ssDir}/${xwdName}", "/eventdisplayweb/images/scx5scr41/${xwdName}") or print("Copy [${ssDir}/${xwdName}] [/eventdisplayweb/images/scx5scr41/${xwdName}] failed: $! \n");
+    
   }
 }
 
@@ -299,17 +307,6 @@ sub provideImages
       }
     }
   }
-
-  if ($FW_SSH_PRIVATE_KEY) {
-    if ( -r $FW_SSH_PRIVATE_KEY ) {
-       $ssh_option = " -i $FW_SSH_PRIVATE_KEY ";
-    }
-    else {
-      print("Ssh private key $FW_SSH_PRIVATE_KEY not existing.");
-      die;
-    }
-  }
-
 
   my $cmsShow_cnt = 60;
   my $live_cnt    = 0;
@@ -370,7 +367,7 @@ sub provideImages
 	$ENV{FW_DIR}  = $FW_DIR;   
 	$ENV{FW_PORT} = $FW_PORT;
 
-	my $afsFile         = readLineFromFile("$FW_LATEST_FILE");
+	my $afsFile         = readLineFromFile("$FW_DATA_DIR/Log/LastFile");
 	my $cmsShow_command = "$FW_DIR/bin/fw-cmsShow-command $afsFile";
 
 	$cmsShow_pid = fork();
@@ -399,14 +396,13 @@ sub provideImages
 	provideImages($scpTarget, \$latest_screenshot);
 	$img_cnt = 0;
 
-	# send status info to scp host and a warning mail if there is no new file for long time
+	# send status info to scp host and a warning mail if delay is more than 20 min
 	my $time =  time();
 	my $dtime = (stat "$latest_data_file")[9];
 	my $stime = (stat "$latest_screenshot")[9];
-        my $data_age_warning = 36000;
-	if ($live_cnt >= $data_age_warning) {
+	if ($live_cnt >= 1200) {
 	  my $delay = $time - $stime;
-	  if ($delay >= $data_age_warning)
+	  if ($delay >= 1200)
 	  {
             my $dmin = int(${delay}/60);
 	    printf("\nWARNING:$dmin minutes delay to load new data!\n");
@@ -420,7 +416,7 @@ sub provideImages
 	}
 	if ($FW_SCP_CMSSHOW_IMAGE_ENABLE || $FW_SCP_DESKTOP_IMAGE_ENABLE ) {
 	  writeLineToFile("$time $dtime $stime", "/tmp/fwStatusInfo");
-	  system("scp $ssh_option /tmp/fwStatusInfo  ${scpTarget}");
+	  system("scp -i $ENV{HOME}/.ssh/image_transfer /tmp/fwStatusInfo  ${scpTarget}");
 	}
       }
 
