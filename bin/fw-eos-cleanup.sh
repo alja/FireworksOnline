@@ -8,7 +8,8 @@ MAIL_LIST=olivito@cern.ch
 #source /afs/cern.ch/project/eos/installation/cms/etc/setup.sh
 EOS_PATH=/eos/cms/store/group/visualization/
 
-EOS_COMMAND=/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select
+## command has to be on afs for acron to see it correctly (?)
+EOS_COMMAND=/afs/cern.ch/project/eos/installation/scripts/bin/eos.select
 
 # use eos quota command to see what fraction of our quota is being used
 CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
