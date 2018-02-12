@@ -2,6 +2,7 @@
 
 # echo Testing $1
 
+# note that the root installation path may vary on different machines!
 . ~/cmsShow-7.1/external/root/bin/thisroot.sh 
 LD_LIBRARY_PATH=:$LD_LIBRARY_PATH:/home/vis/cmsShow-7.1/external/lib
 
@@ -20,6 +21,16 @@ printf("Foo %lld\n", fp);
 }
 else
 {
+  TTree *t = (TTree*)fp->Get("Events");
+  if (t == 0) {
+    printf("Tree %lld\n", t);
+    gSystem->Exit(1);
+  }
+  if (t->GetEntries() == 0) {
+    printf("No events\n");
+    gSystem->Exit(1);
+  }
+
   gSystem->Exit(0);
 }
 }
