@@ -8,7 +8,8 @@ MAIL_LIST=olivito@cern.ch
 #source /afs/cern.ch/project/eos/installation/cms/etc/setup.sh
 EOS_PATH=/eos/cms/store/group/visualization/
 
-EOS_COMMAND=/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select
+## command has to be on afs for acron to see it correctly (?)
+EOS_COMMAND=/afs/cern.ch/project/eos/installation/scripts/bin/eos.select
 
 # use eos quota command to see what fraction of our quota is being used
 CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
@@ -61,7 +62,7 @@ for f in $DEL_FILES; do
 done
 
 # find directories which are now empty
-DEL_DIRS=`$EOS_COMMAND find -d ${EOS_PATH} | grep "${MATCH_STRING}" | grep "ndir=0 nfiles=0"  | awk '{print $1;}'`
+DEL_DIRS=`$EOS_COMMAND find --childcount -d ${EOS_PATH} | grep "${MATCH_STRING}" | grep "ndir=0 nfiles=0"  | awk '{print $1;}'`
 
 # remove empty directories
 for d in $DEL_DIRS; do
