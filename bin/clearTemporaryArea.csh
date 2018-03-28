@@ -29,12 +29,13 @@ set retention_time2=12
 #
 # disk quota (in kB)
 #
-#this is 13 GB: 12882980
+#this is approx 200 GB, size of current disk as of March 2018
 
-set dquota=150000000
+set dquota=200000000
 
 #
 # minfree (in kB)
+# approx 50 GB
 #
 set minfree=50000000
 
@@ -72,7 +73,7 @@ endif
 #  also allow directories to be deleted in this first pass
 if ($used > $maxdisk) then
 if ($verb) then
-    echo Running tmpwatch
+    echo Running tmpwatch with retention_time: $retention_time
 endif
 # /usr/sbin/tmpwatch --verbose -x ".snapshot" -d --mtime $retention_time . 
  /usr/sbin/tmpwatch --verbose -x ".snapshot" --mtime $retention_time . 
@@ -83,25 +84,37 @@ endif
 set newused=`du -s |awk '{print $1}'`
 
 if ($verb) then
-    echo Now used is $newused
+    echo Now used is $newused after first tmpwatch
 endif
 
 if ($newused < $maxdisk) then
 #
 # I am happy, I bail out
 # exit 2 = i had to delete, but just stuff I could delete
+if ($verb) then
+    echo Exit with code 2
+endif
 exit 2
 endif
 #
 # try with retentiontime2 before going on
 # do not allow directories to be deleted here
 #
+if ($verb) then
+    echo Running tmpwatch with retention_time: $retention_time2
+endif
  /usr/sbin/tmpwatch --verbose -x ".snapshot" -d --mtime $retention_time2 .
 set newused=`du -s |awk '{print $1}'`
+if ($verb) then
+    echo Now used is $newused after second tmpwatch
+endif
 if ($newused < $maxdisk) then
 #
 # I am happy, I bail out
 # exit 2 = i had to delete, but just stuff I could delete
+if ($verb) then
+    echo Exit with code 2
+endif
 exit 2
 endif
 
@@ -114,28 +127,32 @@ while ($newused > $maxdisk)
  #
  # find the oldest file
  set file=`ls -t1 */*root|tail -1`
+ echo $file
  if ($file =="") then
-    echo Not enough files to kill, I bail out
+    echo "Not enough files to kill, I bail out"
     exit 4 
  endif
- if ($file ==$oldfile) then
-    echo something fishy, probably a file cannot be deleted, I bail out
+ if ($file == $oldfile) then
+    echo "something fishy, probably a file cannot be deleted, I bail out"
     exit 5
  endif
  if ($verb) then
-    echo Deleting $file  
-endif
- rm -f $file
- set $oldfile=$file
- #calculate new disk free
- set newused=`du -s |awk '{print $1}'`
-if ($verb) then
-    echo Now free is $newused 
-endif
-#
+     echo Deleting $file  
+ endif
+  rm -f $file
+  set $oldfile=$file
+  #calculate new disk free
+  set newused=`du -s |awk '{print $1}'`
+ if ($verb) then
+     echo Now free is $newused after individual file deletion
+ endif
+
 end
 
 #exit three means I had to delete stuff not expired
+if ($verb) then
+    echo Exit with code 3
+endif
 exit 3
 
 #
