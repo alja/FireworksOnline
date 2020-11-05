@@ -2,21 +2,26 @@
 
 kinit -R
 
-MAIL_LIST=olivito@cern.ch
+MAIL_LIST=mario.masciovecchio@cern.ch
 #MAIL_LIST=olivito@cern.ch,gzevi@cern.ch,cerati@cern.ch
 
 #source /afs/cern.ch/project/eos/installation/cms/etc/setup.sh
 EOS_PATH=/eos/cms/store/group/visualization/
 
 ## command has to be on afs for acron to see it correctly (?)
-EOS_COMMAND=/afs/cern.ch/project/eos/installation/scripts/bin/eos.select
+#EOS_COMMAND=/afs/cern.ch/project/eos/installation/scripts/bin/eos.select
+EOS_COMMAND=eos
+export EOS_MGM_URL=root://eoscms.cern.ch
 
 # use eos quota command to see what fraction of our quota is being used
-CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
+CURRENT_DISK_USAGE=`$EOS_COMMAND quota $EOS_PATH | grep "zh" | awk '{print $14;}'`
+#CURRENT_DISK_USAGE=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
+echo $CURRENT_DISK_USAGE
 
 # check number of files
-#CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
-CURRENT_FILE_USAGE=`$EOS_COMMAND find --count -f ${EOS_PATH} | awk '{print $1;}' | awk -F'=' '{print $2;}'`
+CURRENT_FILE_USAGE=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
+#CURRENT_FILE_USAGE=`$EOS_COMMAND find --count -f ${EOS_PATH} | awk '{print $1;}' | awk -F'=' '{print $2;}'`
+echo $CURRENT_FILE_USAGE
 
 # cleanup thresholds
 # hard limit on files is 1000000 (1M), clean up at 800k
@@ -37,7 +42,7 @@ if [ $CHECK_DISK -eq 1 ] || [ $CURRENT_FILE_USAGE -gt $MAX_FILE_USAGE ]; then
     echo "Over cleanup threshold! Taking action."
 else
     echo "Under cleanup threshold. Exiting."
-    echo "usage at $CURRENT_DISK_USAGE% for $EOS_PATH" | mail -s "EOS visualization space: no cleanup needed" $MAIL_LIST
+    echo "usage at $CURRENT_DISK_USAGE% for $EOS_PATH" #| mail -s "EOS visualization space: no cleanup needed" $MAIL_LIST
     exit 0
 fi
 
@@ -57,16 +62,16 @@ DEL_FILES=`$EOS_COMMAND find -f -ctime +${RETENTION_TIME} ${EOS_PATH} | grep "${
 for f in $DEL_FILES; do
     # remove "path=" from file name, if present
     f_clean=${f/path=/}
-    #echo "$EOS_COMMAND rm $f_clean"
+    echo "$EOS_COMMAND rm $f_clean"
     $EOS_COMMAND rm $f_clean
 done
 
 # find directories which are now empty
-DEL_DIRS=`$EOS_COMMAND find -d ${EOS_PATH} | grep "${MATCH_STRING}" | grep "ndir=0 nfiles=0"  | awk '{print $1;}'`
+DEL_DIRS=`$EOS_COMMAND find --childcount -d ${EOS_PATH} | grep "${MATCH_STRING}" | grep "ndir=0 nfiles=0"  | awk '{print $1;}'`
 
 # remove empty directories
 for d in $DEL_DIRS; do
-    #echo "$EOS_COMMAND rmdir $d"
+    echo "$EOS_COMMAND rmdir $d"
     $EOS_COMMAND rmdir $d
 done
 
