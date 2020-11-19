@@ -76,7 +76,8 @@ for d in $DEL_DIRS; do
 done
 
 # check quota again
-DISK_USAGE_AFTER_DEL=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
+DISK_USAGE_AFTER_DEL=`$EOS_COMMAND quota $EOS_PATH | grep "zh" | awk '{print $14;}'`
+#DISK_USAGE_AFTER_DEL=`$EOS_COMMAND quota | grep -B 1 -A 4 "${EOS_PATH}" | grep "zh" | awk '{print $14;}'`
 echo "disk usage after delete: $DISK_USAGE_AFTER_DEL"
 FILE_USAGE_AFTER_DEL=`$EOS_COMMAND find -f ${EOS_PATH} | wc -l`
 echo "file usage after delete: $FILE_USAGE_AFTER_DEL"
