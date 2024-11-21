@@ -77,6 +77,7 @@ sub readLineFromFile {
     my $line = <F>;
     close F;
     chomp $line;
+    print("$filename readLineFromFile >>>>>>> ", $line, "\n");
     return $line;
 }
 
@@ -120,20 +121,9 @@ sub setMonitorLog {
     print("$now Starting fw-monitor with pid $$ \n");
 }
 
-sub setDisplay {
-    if ( length($FW_DISPLAY) ) {
-        print "Set DISPLAY variable from fw-config to $FW_DISPLAY \n";
-        $ENV{DISPLAY} = $FW_DISPLAY;
-    }
-    else {
-        print "Set DISPLAY to default value :0 \n";
-        $ENV{DISPLAY} = ":0";
-    }
-}
-
 sub notifyNewDataFile {
     my $fw_file = shift;
-
+    print("LATEST_FILE $FW_LATEST_FILE\n");
     my $afsFileName = readLineFromFile("$FW_LATEST_FILE");
 
     my $ntime            = localtime();
@@ -142,118 +132,23 @@ sub notifyNewDataFile {
 "$ntime Check new file every $FW_NOTIFY_NEW_FILE_TIMEOUT seconds. Looking at $FW_LATEST_FILE.\nLatest reconstructed file $afsFileName updated at $afsFileTimeStamp.\n"
     );
 
+
+print("3 test sufff");
+  if ( $afsFileName =~ m/\.root$/o )
+  {
+    print("test suffix _OK\n");
+  }
+
+  print("comapre previous $$fw_file.....\n");
+  if ( $afsFileName ne $$fw_file )
+  {
+    print("test new _OK\n");
+  }
+
     if ( ( $afsFileName =~ m/\.root$/o ) && ( $$fw_file ne $afsFileName ) ) {
         printf("Notify new file $afsFileName \n");
         system(" echo $afsFileName | nc -4 -w 10 localhost $FW_PORT");
         $$fw_file = $afsFileName;
-    }
-}
-
-sub provideImages {
-
-    # get scp guest and user name from configuration
-
-    my $scpTarget      = shift;
-    my $old_screenshot = shift;
-
-    my $scpHost;
-    my $scpDir;
-    if ( $scpTarget =~ m/([a-zA-Z0-9]+)@(.*):(.*)/o ) {
-        $scpHost = "$1" . "\@" . "$2";
-        $scpDir  = $3;
-    }
-    elsif ( $scpTarget =~ m/(.*):(.*)/ ) {
-        $scpHost = "$1";
-        $scpDir  = $2;
-    }
-    else {
-        fwQuit("Can't get valid scp host from $scpTarget.");
-        die;
-    }
-
-# get latest series of images produced with cmsShow option --auto-save-all-views
-    my $ssDir = "$FW_DIR/screenshots";
-
-    # get latest file and remove file more than fice days old
-    opendir( my $dh, $ssDir );
-    my $maxAge        = 3600 * 24 * 5;
-    my $minTimeDifVal = $maxAge;
-    my $minTimeDifFile;
-    my $ktime = time();
-
-    my $fexp = '(.*)_(\d+)_(\d+)_(\d+)_([a-zA-Z0-9]+)(_\d)?.png';
-
-    while ( my $file = readdir $dh ) {
-        if ( $file =~ /$fexp/o ) {
-            my $mtime = ( stat "${ssDir}/${file}" )[9];
-            my $dif   = $ktime - $mtime;
-
-            if ( $dif > $maxAge ) {
-                print("remove old screenshot $file \n");
-                unlink "${ssDir}/${file}";
-                next;
-            }
-
-            if ( $dif < $minTimeDifVal ) {
-                $minTimeDifVal  = $dif;
-                $minTimeDifFile = $file;
-            }
-        }
-    }
-    closedir($dh);
-
-    if ($FW_SCP_CMSSHOW_IMAGE_ENABLE) {
-
-        # scp images from latest event
-        unless ( "${ssDir}/${minTimeDifFile}" eq $$old_screenshot ) {
-            opendir( my $dh, $ssDir );
-            if ( $minTimeDifFile =~ m/$fexp/o ) {
-                my $base = "$1_$2_$3_$4";
-                sleep 1;    # wait in case all images are not produced
-                while ( my $newImg = readdir $dh ) {
-                    next unless ( $newImg =~ m/${base}/ );
-                    if ( $newImg =~ m/$fexp/o ) {
-                        my $stdName = "$5$6.png";
-                        copy( "${ssDir}/${newImg}", "${ssDir}/${stdName}" )
-                          or fwQuit
-"Copy [${ssDir}/${newImg}] [${ssDir}/${stdName}] failed: $!";
-
-                        my $newStdName = "new-$stdName";
-
-                        debugPrint("scp $newImg as ${newStdName} \n");
-                        system(
-"scp $ssh_option ${ssDir}/${stdName} ${scpTarget}/${newStdName}"
-                        );
-                        system(
-"ssh $ssh_option ${scpHost} \"mv ${scpDir}/${newStdName} ${scpDir}/${stdName}\""
-                        );
-                        if ( $6 eq "_1" ) {
-                            system(
-"ssh $ssh_option ${scpHost} \"cp ${scpDir}/${stdName} ${scpDir}/$5.png\""
-                            );
-                        }
-                    }
-                }
-            }
-            $$old_screenshot = "${ssDir}/${minTimeDifFile}";
-            closedir($dh);
-        }
-    }
-
-    # create xwd screenshot
-    if ($FW_SCP_DESKTOP_IMAGE_ENABLE) {
-        my $xwdName    = "xwd-root.png";
-        my $newXwdName = "new-$xwdName";
-        system("xwd -root | convert - ${ssDir}/${xwdName}");
-
-        debugPrint(
-"scp $ssh_option  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName} \n"
-        );
-        system(
-            "scp $ssh_option  ${ssDir}/${xwdName}  ${scpTarget}/${newXwdName}");
-        system(
-"ssh -2 $ssh_option  ${scpHost} \"mv ${scpDir}/${newXwdName} ${scpDir}/${xwdName}\""
-        );
     }
 }
 
@@ -278,21 +173,15 @@ sub provideImages {
     # setup env
     setMonitorLog();
     do "$FW_DIR/bin/fw-config.txt";
-    setDisplay();
+    my $cmsShow_cnt = 60;
+    my $live_cnt    = 0;
+    my $feeder_cnt  = 0;
+    my $img_cnt     = 0;
 
-    # set scp target from matching domain
-    my $domain = hostdomain();
-    my $scpTarget;
-    for my $sx ( split( /\s+/, $FW_SCP_TARGET ) ) {
-        if ( $sx =~ m/$domain/ ) {
-            $scpTarget = $sx;
-            last;
-        }
-    }
-    fwQuit("Can't locate scp target from domain\n")
-      unless ( length($scpTarget) );
+    my $latest_screenshot;
+    my $latest_data_file;
 
-    # build maillist for current domain
+ # build maillist for current domain
     my $hname = domainname();
     my $mlist;
     {
@@ -303,24 +192,6 @@ sub provideImages {
             }
         }
     }
-
-    if ($FW_SSH_PRIVATE_KEY) {
-        if ( -r $FW_SSH_PRIVATE_KEY ) {
-            $ssh_option = " -i $FW_SSH_PRIVATE_KEY ";
-        }
-        else {
-            print("Ssh private key $FW_SSH_PRIVATE_KEY not existing.");
-            die;
-        }
-    }
-
-    my $cmsShow_cnt = 60;
-    my $live_cnt    = 0;
-    my $feeder_cnt  = 0;
-    my $img_cnt     = 0;
-
-    my $latest_screenshot;
-    my $latest_data_file;
 
     while (1) {
 
@@ -389,7 +260,7 @@ sub provideImages {
                 $cmsShow_cnt = 0;
             }
 
-            system("ps -C cmsShow.exe -o pid=,command=");
+            # system("ps --forest -o pid,tty,stat,time,cmd");
 
             # notify new files
             if ( $FW_NEW_FILE_NOTIFICATION
@@ -397,46 +268,6 @@ sub provideImages {
             {
                 notifyNewDataFile( \$latest_data_file );
                 $feeder_cnt = 0;
-            }
-
-            # check for new images
-            if ( $img_cnt >= $FW_TRANSFER_IMAGE_TIMEOUT ) {
-                debugPrint(
-                    "Check new screenshots every $FW_TRANSFER_IMAGE_TIMEOUT \n"
-                );
-                provideImages( $scpTarget, \$latest_screenshot );
-                $img_cnt = 0;
-
-# send status info to scp host and a warning mail if there is no new file for long time
-                my $time             = time();
-                my $dtime            = ( stat "$latest_data_file" )[9];
-                my $stime            = ( stat "$latest_screenshot" )[9];
-                my $data_age_warning = 36000;
-                if ( $live_cnt >= $data_age_warning ) {
-                    my $delay = $time - $stime;
-                    if ( $delay >= $data_age_warning ) {
-                        my $dmin = int( ${delay} / 60 );
-                        printf(
-                            "\nWARNING:$dmin minutes delay to load new data!\n"
-                        );
-                        my $scalar_stime = localtime($stime);
-                        my $scalar_dtime = localtime($dtime);
-                        my $msg =
-"Last reconstructed file more than $dmin min delayed: Latest screenshot $latest_screenshot created at $scalar_stime. Last reconstructed file $latest_data_file modified at $scalar_dtime.";
-
-                        system(
-" echo $msg | mail -s ${hname}::cmsShow-warning $mlist"
-                        );
-                    }
-                    $live_cnt = 0;
-                }
-                if (   $FW_SCP_CMSSHOW_IMAGE_ENABLE
-                    || $FW_SCP_DESKTOP_IMAGE_ENABLE )
-                {
-                    writeLineToFile( "$time $dtime $stime",
-                        "/tmp/fwStatusInfo" );
-                    system("scp $ssh_option /tmp/fwStatusInfo  ${scpTarget}");
-                }
             }
 
             $cmsShow_cnt++;
