@@ -10,17 +10,17 @@ $FW_NOTIFY_NEW_FILE_TIMEOUT   = 5; # sleep n seconds to notify new data file
 
 $FW_PORT                      = 8092;
 
-$FW_LATEST_FILE               = '/home/vis/LatestFile/Log/LastFile';
+$FW_LATEST_FILE               = '/home/viz/FireworksOnline/bin/LastFile';
 
 $FW_DEBUG                     = 1; # debug info in monitor.log
 
-$FW_SCP_CMSSHOW_IMAGE_ENABLE  = 1; # generated with cmsShow option update-all-images
+$FW_SCP_CMSSHOW_IMAGE_ENABLE  = 0; # generated with cmsShow option update-all-images
 
-$FW_SCP_DESKTOP_IMAGE_ENABLE  = 1; # generated with xwd
+$FW_SCP_DESKTOP_IMAGE_ENABLE  = 0; # generated with xwd
 
 $FW_TRANSFER_IMAGE_TIMEOUT    = 20; # sleep n seconds between scp images
 
-$FW_SCP_TARGET                = 'evtdisp@srv-c2c03-01--cms.cern.ch:images';
+# $FW_SCP_TARGET                = 'evtdisp@srv-c2c03-01--cms.cern.ch:images';
 
 $FW_SSH_PRIVATE_KEY           = '/home/vis/.ssh/image_transfer';
 
