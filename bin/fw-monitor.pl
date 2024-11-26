@@ -12,7 +12,7 @@ use Net::Domain qw(hostname hostfqdn hostdomain domainname);
 use vars qw
   ($FW_ENABLED $FW_DISPLAY
   $FW_NEW_FILE_NOTIFICATION $FW_NOTIFY_NEW_FILE_TIMEOUT
-  $FW_PORT $FW_LATEST_FILE $FW_DEBUG
+  $FW_PORT $FW_HTTP_PORT $FW_LATEST_FILE $FW_DEBUG
   $FW_SCP_CMSSHOW_IMAGE_ENABLE $FW_SCP_DESKTOP_IMAGE_ENABLE
   $FW_TRANSFER_IMAGE_TIMEOUT
   $FW_SCP_TARGET $FW_SSH_PRIVATE_KEY $FW_MAIL_LIST);
@@ -244,9 +244,11 @@ print("3 test sufff");
 
                 $ENV{FW_DIR}  = $FW_DIR;
                 $ENV{FW_PORT} = $FW_PORT;
+		$ENV{FW_HTTP_PORT} = $FW_HTTP_PORT;
+		$ENV{FW_LATEST_FILE} = $FW_LATEST_FILE;
 
                 my $afsFile         = readLineFromFile("$FW_LATEST_FILE");
-                my $cmsShow_command = "$FW_DIR/bin/fw-cmsShow-command $afsFile";
+                my $cmsShow_command = "$FW_DIR/bin/fw-cmsShow-command $afsFile $FW_LATEST_FILE";
 
                 $cmsShow_pid = fork();
                 if ( $cmsShow_pid == 0 ) {

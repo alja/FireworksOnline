@@ -2,8 +2,9 @@
 use strict;
 
 my $maxAgeSec = 6000000;
-my $dir       = "/eventdisplay/run*/";
-my $lastFile  = "/home/vis/Log/LastFile";
+my $dir       = "/eos/cms/store/group/visualization/run*";
+my $lastFile  = "/home/viz/FireworksOnline/bin/LastFile";
+my $testScrip = "/home/viz/FireworksOnline/bin/testFile.sh";
 
 #my $lastFile = "LastFile";
 
@@ -29,18 +30,21 @@ sub readLineFromFile {
 while (1) {
     my $ref = "/tmp/cmsShow-tmp.txt";
     system("touch -d \"-$maxAgeSec seconds\" $ref");
-    my $lc = `find $dir -maxdepth 1 -mindepth 1 -name \\*.root -newer $ref `;
+    print("dir find ....", $dir , " \n");
+    #my $lc = `k5start -q -f /home/viz/private/cmsvis.kt cmsvis -- find $dir -maxdepth 1 -mindepth 1 -name \\*.root -newer $ref `;
+    my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \\*.root`;
 
-    # my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \\*streamEvDOutput2_dqmcluster.root -newer $ref `;
+   # print("______list ", $lc, "\n");
     my @candidates   = split( "\n", $lc );
     my $current_time = time;
     my %hash;
+
     foreach (@candidates) {
         my $cnd   = $_;
         my $delta = $current_time - ( stat($cnd) )[9];
         if ( $delta > $minFileAge ) {
 
-            #	print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
+           # print("candidate $_ ", (stat($cnd))[9] , " ", $delta, "\n");
             $hash{$delta} = $cnd;
         }
     }
@@ -48,9 +52,10 @@ while (1) {
         my @times   = sort { $a <=> $b } keys %hash;
         my $latestt = @times[0];
         my $latest  = $hash{$latestt};
+        print("latest candidate $latestt time, file path >>> $latest  \n");
 
-        ### MT 2014-11-07: Hack ... check if latest file can be opened by root
-        if ( system("/home/vis/testFile.sh $latest") ) {
+        ### check if latest file can be opened by ROOT
+        if ( system("k5start -q -f /home/viz/private/cmsvis.kt cmsvis -- $testScrip $latest") ) {
             print "Latest file '$latest' can not be opened by root, sleeping 5 seconds;\n";
             sleep 1;
             next;
@@ -62,6 +67,7 @@ while (1) {
         # sort files by modification time
         if ( $sp ne $latest ) {
             system("echo $hash{$latestt} > $lastFile");
+            print("writing latest file in the bin/LatestFile $latestt");
             print localtime, " new LastFile = $latest\n";
         }
         else {

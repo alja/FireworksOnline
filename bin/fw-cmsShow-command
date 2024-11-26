@@ -2,16 +2,33 @@
 
 # export DISPLAY=:0.0
 
+# FW_DIR=$HOME/FireworksOnline/
+# FW_LATEST_FILE=/home/viz/playback/heavyIon_2024/LatestFile
+# FW_HTTP_PORT=10005
+
 dataFile=$1;
+
 ln -s -f ${FW_DIR}/log/cmsShow.$$.log ${FW_DIR}/log/cmsShow.log
 
-options="--config-file ${FW_DIR}/config/collisions-20160825_5screens_plusLego2.fwc";
+echo "------------------------ FW_PORT $FW_PORT ======"
 
-options+=" --no-version-check --auto-save-all-views $FW_DIR/screenshots/online_ --log 0 --chain 10  --port $FW_PORT -p 5 --live --free-palette"
-options+=" --auto-save-height 800"
-options+=" --sync-all-views"
+options=" --port $FW_HTTP_PORT -p 2 --chain 10 --live --live-path $FW_LATEST_FILE";
+echo "Starting cmsShowWeb.exe $options $dataFile";
 
-echo "Starting cmsShow $options $dataFile";
+set -x
+export od=$PWD
+# source env.sh
 
-cd /home/vis/cmsShow-9.0-2
-./cmsShow $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1
+
+export SCRAM_ARCH=el9_amd64_gcc12
+. /data2/alja/cmsBld/rep/cmsset_default.sh
+cd $HOME/CMSSW_14_2_0_pre1/src/
+eval `scramv1 runtime -sh`
+
+
+# cd $od
+
+which cmsShowWeb.exe
+
+
+ k5start -q -f $HOME/private/cmsvis.kt cmsvis -- stdbuf --output=L cmsShowWeb.exe $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1
