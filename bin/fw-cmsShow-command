@@ -12,12 +12,12 @@ ln -s -f ${FW_DIR}/log/cmsShow.$$.log ${FW_DIR}/log/cmsShow.log
 
 echo "------------------------ FW_PORT $FW_PORT ======"
 
-options=" --port $FW_HTTP_PORT -p 2 --chain 10 --live --live-path $FW_LATEST_FILE";
+options=" --port $FW_HTTP_PORT -p 2 -c /home/fwdev/FireworksOnline/config/HI.fwc --chain 10 --live --live-path $FW_LATEST_FILE";
+# options=" --port $FW_HTTP_PORT -p 2 --chain 10 --live --live-path $FW_LATEST_FILE";
 echo "Starting cmsShowWeb.exe $options $dataFile";
 
 set -x
 export od=$PWD
-# source env.sh
 
 
 export SCRAM_ARCH=el9_amd64_gcc12
@@ -31,4 +31,5 @@ eval `scramv1 runtime -sh`
 which cmsShowWeb.exe
 
 
- k5start -q -f $HOME/private/cmsvis.kt cmsvis -- stdbuf --output=L cmsShowWeb.exe $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1
+k5start -q -f $HOME/private/cmsvis.kt cmsvis -- cmsShowWeb.exe $options $dataFile >  ${FW_DIR}/log/cmsShow.$$.log 2>&1
+
