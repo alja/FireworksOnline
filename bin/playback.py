@@ -33,8 +33,9 @@ while True :
     index = 0
     while index < len(random_list):
         filename = random_list[index];
-        cmd = "echo " + filename + " > " + directory_path + "/LatestFile"
+        #cmd = "echo " + filename + " > " + directory_path + "/LatestFile"
+        cmd = "echo " + filename + " > /home/fwdev/LatestFile"
         print(cmd)
         os.system(cmd)
         index += 1
-        time.sleep(5)
+        time.sleep(60)

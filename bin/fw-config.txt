@@ -2,16 +2,16 @@
 #       use fireworksOnlineSystem instead.
 
 
-$FW_ENABLED                   = 0 ;
+$FW_ENABLED                   = 1 ;
 
 $FW_NEW_FILE_NOTIFICATION     = 1; # notify new files 
 
 $FW_NOTIFY_NEW_FILE_TIMEOUT   = 5; # sleep n seconds to notify new data file
 
-$FW_HTTP_PORT                 = 10005; # defines virtual host, translates to https://vocms0101.cern.ch/host05/win1/
+$FW_HTTP_PORT                 = 443; # defines virtual host, translates to https://vocms0101.cern.ch/host05/win1/
 $FW_PORT                      = 8092; # unused
 
-$FW_LATEST_FILE               = '/home/viz/playback/heavyIon_2024/LatestFile';
+$FW_LATEST_FILE               = '/home/fwdev/FireworksOnline/bin/LastFile';
 
 $FW_DEBUG                     = 1; # debug info in monitor.log
 

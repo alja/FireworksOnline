@@ -3,8 +3,8 @@ use strict;
 
 my $maxAgeSec = 6000000;
 my $dir       = "/eos/cms/store/group/visualization/run*";
-my $lastFile  = "/home/viz/FireworksOnline/bin/LastFile";
-my $testScrip = "/home/viz/FireworksOnline/bin/testFile.sh";
+my $lastFile  = "/home/fwdev/FireworksOnline/bin/LastFile";
+my $testScript = "/home/fwdev/FireworksOnline/bin/testFile.sh";
 
 #my $lastFile = "LastFile";
 
@@ -32,7 +32,7 @@ while (1) {
     system("touch -d \"-$maxAgeSec seconds\" $ref");
     print("dir find ....", $dir , " \n");
     #my $lc = `k5start -q -f /home/viz/private/cmsvis.kt cmsvis -- find $dir -maxdepth 1 -mindepth 1 -name \\*.root -newer $ref `;
-    my $lc=`find $dir -maxdepth 1 -mindepth 1 -name \\*.root`;
+    my $lc=`k5start -q -f /home/fwdev/private/cmsvis.kt cmsvis -- authbind find $dir -maxdepth 1 -mindepth 1 -name \\*.root`;
 
    # print("______list ", $lc, "\n");
     my @candidates   = split( "\n", $lc );
@@ -55,7 +55,7 @@ while (1) {
         print("latest candidate $latestt time, file path >>> $latest  \n");
 
         ### check if latest file can be opened by ROOT
-        if ( system("k5start -q -f /home/viz/private/cmsvis.kt cmsvis -- $testScrip $latest") ) {
+        if ( system("k5start -q -f /home/fwdev/private/cmsvis.kt cmsvis -- $testScript $latest") ) {
             print "Latest file '$latest' can not be opened by root, sleeping 5 seconds;\n";
             sleep 1;
             next;

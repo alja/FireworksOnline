@@ -69,7 +69,7 @@ sub getCmsShowExePid
   if ( -r "$fwdir/log/cmsShow_pid") {
     my $sp = readLineFromFile("$fwdir/log/monitor_pid");
     my $tree=`pstree -pcl $sp`;
-    if ($tree =~ /cmsShow.exe\((\d+)\)/) {
+    if ($tree =~ /cmsShowWeb.exe\((\d+)\)/) {
       return $1;
     }
   }

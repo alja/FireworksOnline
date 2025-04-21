@@ -5,8 +5,8 @@
 #. ~/cmsShow-8.1/external/root/bin/thisroot.sh 
 #LD_LIBRARY_PATH=:$LD_LIBRARY_PATH:/home/vis/cmsShow-8.1/external/lib
 
-export SHELLDIR=/home/vis/FireworksOnline/bin
-. $SHELLDIR/env.sh
+#export SHELLDIR=/home/vis/FireworksOnline/bin
+#. $SHELLDIR/env.sh
 
 # root.exe <<EOF
 root.exe > /dev/null 2>&1 <<EOF
