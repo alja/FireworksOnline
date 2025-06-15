@@ -218,24 +218,11 @@ else
       foreach(@dirs) { fwStatus $_; };
     }
     case "restart" {
-
-      if (@dirs > 1) { print "More one EVD find in $FW_DIR. Must specify subdirectory \n"; exit }
-
-      my @dirsTOP;
-      my $top = dirname("$path");
-      print ("... $top ;;;;; \n");
-      opendir X, $top;
-      while ($_ = readdir(X)) {
-	my $pref = "$top/$_";
-	next unless -d $pref;
-	printf "===> $pref\n";
-	my $fn = "$pref/bin/fireworksOnlineSystem";
-	push @dirsTOP, $pref if -x $fn;
-      }
-      closedir X;
-      foreach(@dirsTOP) { fwStop $_; };
-
-      foreach(@dirs) { fwStart $_; };
+      fwStop  $dirs[0];
+      fwStatus $dirs[0];
+      fwStart $dirs[0];
+      sleep 2;
+      fwStatus $dirs[0];
     }
     else {
       print("Invalid option. \n");
